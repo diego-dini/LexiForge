@@ -7,6 +7,7 @@ RUN bun install --frozen-lockfile --production
 
 COPY public ./public
 COPY src ./src
+COPY prompt-models ./prompt-models
 COPY tsconfig.json ./
 
 ENV NODE_ENV=production

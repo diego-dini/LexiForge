@@ -7,8 +7,6 @@ export type PreparePromptParams = {
   text: string;
 };
 
-const DEFAULT_PROMPT_MODEL = "default";
-
 export const DEFAULT_TRANSLATION_PROMPT = `
 Translate the following text from {sourceLanguage} to {targetLanguage}.
 
@@ -24,73 +22,37 @@ Text:
 "{text}"
 `.trim();
 
-export const FFXIV_SHORT_TRANSLATION_PROMPT = `
-Translate the following Final Fantasy XIV dialogue from {sourceLanguage} to {targetLanguage}.
-
-Preserve tone, personality, lore, terminology, and immersion. Adapt idioms and expressions naturally for native {targetLanguage} speakers while keeping consistency with Final Fantasy XIV localization style.
-
-Avoid literal translation when it harms meaning or flow.
-
-{glossary}
-
-Return only the translated text.
-
-Text:
-"{text}"
-`.trim();
-
-export const FFXIV_LONG_TRANSLATION_PROMPT = `
-As an expert translator and cultural localization specialist with deep knowledge of video game localization, your task is to translate dialogues from the game Final Fantasy XIV from {sourceLanguage} to {targetLanguage}.
-
-Preserve tone, humor, emotional nuance, lore, terminology, and character identity. Adapt idioms, wordplay, and cultural references naturally for native {targetLanguage} speakers while maintaining the Final Fantasy XIV universe and localization style.
-
-Maintain consistency with established Final Fantasy XIV terminology, spell names, and narrative conventions. Avoid literal translations that weaken meaning, immersion, or flow.
-
-Ensure the text reads naturally in {targetLanguage}, respecting formal and informal speech patterns appropriate to the character and context.
-
-{glossary}
-
-Return only the translated text without explanations, comments, or quotation marks.
-
-Text:
-"{text}"
-`.trim();
-
-export const PROMPT_MODELS: Record<string, string> = {
-  [DEFAULT_PROMPT_MODEL]: DEFAULT_TRANSLATION_PROMPT,
-  "ffxiv-short": FFXIV_SHORT_TRANSLATION_PROMPT,
-  "ffxiv-long": FFXIV_LONG_TRANSLATION_PROMPT,
-};
-
-export function preparePrompt({
+/**
+ * Builds the final prompt sent to Ollama.
+ *
+ * Prompt models are templates. They can come from the internal default, the
+ * saved prompt-model JSON file, or a one-off `customPromptModel` request body.
+ */
+export async function preparePrompt({
   sourceLanguage,
   targetLanguage,
   text,
-  promptModel = DEFAULT_PROMPT_MODEL,
+  promptModel = "default",
   customPromptModel,
   glossary,
 }: PreparePromptParams) {
-  const template = getPromptTemplate(promptModel, customPromptModel);
+  const { getPromptTemplate } = await import("./services/promptModels");
+  const template = await getPromptTemplate(promptModel, customPromptModel);
   const glossaryText = formatGlossary(glossary, text);
 
   return template
     .replaceAll("{sourceLanguage}", sourceLanguage)
+    // `originLanguage` is kept as a friendlier alias used in the editor UI.
+    .replaceAll("{originLanguage}", sourceLanguage)
     .replaceAll("{targetLanguage}", targetLanguage)
     .replaceAll("{glossary}", glossaryText)
     .replaceAll("{text}", text);
 }
 
-function getPromptTemplate(
-  promptModel: string,
-  customPromptModel?: string,
-) {
-  if (promptModel === "custom" && customPromptModel?.trim()) {
-    return customPromptModel.trim();
-  }
-
-  return PROMPT_MODELS[promptModel] ?? DEFAULT_TRANSLATION_PROMPT;
-}
-
+/**
+ * Emits only glossary entries that are relevant to the current text so prompts
+ * stay small and focused.
+ */
 function formatGlossary(
   glossary: Record<string, string> | undefined,
   text: string,

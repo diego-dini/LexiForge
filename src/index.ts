@@ -7,8 +7,8 @@ import {
   showModel,
 } from "./services/ollama";
 import { debugLog, logRequestError } from "./logger";
-import { PROMPT_MODELS } from "./preparePrompt";
 import { translateJsonEntriesStream } from "./services/jsonTranslator";
+import { prompRoutes } from "./routes/promp.ts";
 
 const app = new Hono();
 const idleTimeout = Number(Bun.env.IDLE_TIMEOUT_SECONDS ?? 120);
@@ -19,9 +19,12 @@ function servePublicFile(fileName: string, contentType: string) {
   return new Response(file, {
     headers: {
       "Content-Type": contentType,
+      "Cache-Control": "no-cache",
     },
   });
 }
+
+app.get("/favicon.ico", () => servePublicFile("favicon.svg", "image/x-icon"));
 
 // Fallback error handler for routes that fail before reading their body, such
 // as invalid JSON parsing or unexpected framework errors.
@@ -39,7 +42,7 @@ app.get("/app.js", () =>
   servePublicFile("app.js", "text/javascript; charset=utf-8"),
 );
 
-app.get("/api/prompt-models", (c) => c.json(PROMPT_MODELS));
+app.route("/api/promp", prompRoutes);
 
 app.get("/api/tags", async (c) => {
   debugLog("[route:/api/tags]");

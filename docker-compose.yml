@@ -14,6 +14,8 @@ services:
       IDLE_TIMEOUT_SECONDS: ${IDLE_TIMEOUT_SECONDS:-120}
     extra_hosts:
       - "host.docker.internal:host-gateway"
+    volumes:
+      - ./prompt-models:/app/prompt-models
     restart: unless-stopped
 
   # Optional local Ollama service. Start it with:

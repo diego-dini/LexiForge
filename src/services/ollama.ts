@@ -168,13 +168,13 @@ export async function generate({
 /**
  * Converts the intercepted generate body into this project's translation flow.
  *
- * The original prompt is parsed for language and dialogue data, then replaced
- * with the Final Fantasy XIV localization prompt before calling Ollama.
+ * The original prompt is parsed for language and text data, then rendered
+ * through the selected prompt model before calling Ollama.
  */
 export async function generateTranslation(body: OllamaGenerateBody) {
   const extracted = extractTranslationData(body.prompt ?? "");
 
-  const prompt = preparePrompt({
+  const prompt = await preparePrompt({
     promptModel: body.promptModel,
     customPromptModel: body.customPromptModel,
     glossary: body.glossary,

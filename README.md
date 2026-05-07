@@ -1,16 +1,22 @@
 # LexiForge
 
-Local interceptor for requests compatible with Ollama's `/api/generate` route.
-It receives a translation prompt, extracts the source language, target language,
-and text, builds a Final Fantasy XIV localization prompt, and forwards the
-request to Ollama.
+Local interceptor and UI for requests compatible with Ollama's
+`/api/generate` route. It receives a translation prompt, extracts the source
+language, target language, and text, applies the selected prompt model, and
+forwards the request to Ollama.
 
 ## Routes
 
 - `GET /`: opens the local translation UI from `public/index.html`.
 - `GET /styles.css`: serves the UI stylesheet.
 - `GET /app.js`: serves the UI script.
-- `GET /api/prompt-models`: returns the prompt templates used by the UI.
+- `GET /api/promp`: returns the prompt templates used by the UI.
+- `GET /api/promp/details`: returns prompt templates with saved/built-in
+  metadata.
+- `POST /api/promp`: creates a saved prompt template.
+- `PUT /api/promp/:name`: replaces a saved prompt template.
+- `DELETE /api/promp/:name`: deletes a saved prompt template.
+- `POST /api/promp/validate`: validates prompt template placeholders.
 - `GET /api/tags`: forwards to Ollama and returns available models.
 - `GET /api/ps`: forwards to Ollama and returns running models.
 - `POST /api/show`: forwards model details requests to Ollama.
@@ -98,17 +104,29 @@ curl -X POST "http://localhost:3000/api/generate" \
 `POST /api/generate` accepts an optional `promptModel` field:
 
 - `default`: generic translation prompt without game context.
-- `ffxiv-short`: compact Final Fantasy XIV localization prompt.
-- `ffxiv-long`: more detailed Final Fantasy XIV localization prompt.
 - `custom`: uses the `customPromptModel` field as the prompt template.
 
 When `promptModel` is missing or unknown, the app uses `default`.
 
+Saved prompt models are stored in `prompt-models/prompt-models.json` and are
+loaded together with the built-in models when the app starts or the UI refreshes
+the prompt model list.
+
+The built-in `default` prompt model is internal. It is used as a fallback by the
+translation flow, but it is not returned by `/api/promp` and cannot be created,
+updated, downloaded, or deleted through the prompt model UI/API.
+
 Custom prompt templates can use these placeholders:
 
+- `{glossary}`
+- `{originLanguage}`
 - `{sourceLanguage}`
 - `{targetLanguage}`
 - `{text}`
+
+Templates must include `{text}` and `{targetLanguage}` before they can be
+saved. Missing `{originLanguage}` or `{sourceLanguage}`, and missing
+`{glossary}`, are shown as warnings in the editor.
 
 Example custom body:
 
@@ -124,3 +142,18 @@ Example custom body:
 
 The server logs the received request, the request forwarded to Ollama, and the
 response returned by Ollama.
+
+### Prompt Model API
+
+Prompt model management lives under `/api/promp`:
+
+- `GET /api/promp`: list saved models visible in the UI.
+- `GET /api/promp/details`: list saved models with metadata for management
+  screens.
+- `POST /api/promp`: create a saved model.
+- `PUT /api/promp/:name`: replace a saved model.
+- `DELETE /api/promp/:name`: delete a saved model.
+- `POST /api/promp/validate`: validate placeholders without saving.
+
+Names are normalized before they are stored. For example, `New Model 1`,
+`new-model-1`, and `new_model_1` all become `new_model_1`.
