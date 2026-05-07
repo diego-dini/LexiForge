@@ -52,6 +52,32 @@ bun run start --debug
 
 The app also accepts `--degug`.
 
+## Docker
+
+Build and run LexiForge with Docker Compose:
+
+```bash
+docker compose up --build
+```
+
+By default the container reaches Ollama through:
+
+```text
+http://host.docker.internal:11434
+```
+
+Override it when needed:
+
+```bash
+OLLAMA_HOST=http://ollama:11434 docker compose up --build
+```
+
+To also start an Ollama container:
+
+```bash
+docker compose --profile ollama up --build
+```
+
 ## Environment
 
 - `OLLAMA_HOST`: real Ollama server address. Default: `http://localhost:11434`.

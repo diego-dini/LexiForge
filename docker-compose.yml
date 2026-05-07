@@ -1,0 +1,33 @@
+name: lexiforge
+
+services:
+  lexiforge:
+    build:
+      context: .
+    image: lexiforge:latest
+    container_name: lexiforge
+    ports:
+      - "3000:3000"
+    environment:
+      OLLAMA_HOST: ${OLLAMA_HOST:-http://host.docker.internal:11434}
+      MODEL_CACHE_TTL_MS: ${MODEL_CACHE_TTL_MS:-60000}
+      IDLE_TIMEOUT_SECONDS: ${IDLE_TIMEOUT_SECONDS:-120}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped
+
+  # Optional local Ollama service. Start it with:
+  # docker compose --profile ollama up --build
+  ollama:
+    image: ollama/ollama:latest
+    container_name: lexiforge-ollama
+    profiles:
+      - ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama-data:/root/.ollama
+    restart: unless-stopped
+
+volumes:
+  ollama-data:
