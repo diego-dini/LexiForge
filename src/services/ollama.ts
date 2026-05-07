@@ -23,6 +23,7 @@ let modelsRequest: Promise<string[]> | null = null;
  */
 type OllamaTag = {
   name: string;
+  size?: number;
 };
 
 type OllamaTagsResponse = {
@@ -52,6 +53,39 @@ export async function getTags(): Promise<OllamaTagsResponse> {
   debugLog("[ollama:getTags]");
 
   return ollamaFetch("/api/tags") as any as OllamaTagsResponse;
+}
+
+export async function modelExists(model: string) {
+  const normalizedModel = model.trim();
+
+  if (!normalizedModel) {
+    return false;
+  }
+
+  const tags = await getTags();
+
+  return tags.models.some((tag) =>
+    modelNamesMatch(tag.name, normalizedModel),
+  );
+}
+
+export function modelNamesMatch(installedName: string, requestedName: string) {
+  const installed = installedName.trim();
+  const requested = requestedName.trim();
+
+  if (!installed || !requested) {
+    return false;
+  }
+
+  if (installed === requested) {
+    return true;
+  }
+
+  if (!requested.includes(":")) {
+    return installed === `${requested}:latest`;
+  }
+
+  return false;
 }
 
 /**
@@ -109,6 +143,32 @@ export async function showModel(body: unknown) {
   return ollamaFetch("/api/show", {
     method: "POST",
     body: JSON.stringify(body),
+    headers: {
+      "Content-Type": "application/json",
+    },
+  });
+}
+
+export async function pullModel(model: string) {
+  debugLog("[ollama:pullModel]", { model });
+  cachedModels = null;
+
+  return ollamaFetch("/api/pull", {
+    method: "POST",
+    body: JSON.stringify({ model, stream: false }),
+    headers: {
+      "Content-Type": "application/json",
+    },
+  });
+}
+
+export async function deleteModel(model: string) {
+  debugLog("[ollama:deleteModel]", { model });
+  cachedModels = null;
+
+  return ollamaFetch("/api/delete", {
+    method: "DELETE",
+    body: JSON.stringify({ model }),
     headers: {
       "Content-Type": "application/json",
     },
@@ -202,7 +262,9 @@ export async function resolveModel(model?: string) {
   }
 
   const models = await getAvailableModels();
-  const exists = models.includes(model);
+  const exists = models.some((installedModel) =>
+    modelNamesMatch(installedModel, model),
+  );
 
   if (!exists) {
     debugLog(`[ollama:model-fallback] ${model} -> ${FALLBACK_MODEL}`);

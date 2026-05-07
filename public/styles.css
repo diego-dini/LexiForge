@@ -22,15 +22,15 @@ body {
 main {
   width: min(1220px, calc(100vw - 32px));
   margin: 0 auto;
-  padding: 28px 0 36px;
+  padding: 32px 0 44px;
 }
 
 .app-header {
   display: flex;
   justify-content: space-between;
   align-items: end;
-  gap: 18px;
-  margin-bottom: 18px;
+  gap: 22px;
+  margin-bottom: 22px;
 }
 
 .app-header h1 {
@@ -80,7 +80,7 @@ main {
 .shell {
   display: grid;
   grid-template-columns: minmax(0, 1.15fr) minmax(340px, 0.85fr);
-  gap: 18px;
+  gap: 22px;
   align-items: start;
 }
 
@@ -95,7 +95,7 @@ main {
 .panel-header {
   border-bottom: 1px solid #e7ebf1;
   background: #fbfcfe;
-  padding: 15px 18px;
+  padding: 17px 22px;
 }
 
 h2 {
@@ -109,13 +109,13 @@ form,
 .result,
 .page-form {
   display: grid;
-  gap: 18px;
-  padding: 18px;
+  gap: 22px;
+  padding: 22px;
 }
 
 .section {
   display: grid;
-  gap: 12px;
+  gap: 14px;
 }
 
 .section-title {
@@ -129,7 +129,7 @@ form,
 .grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 12px;
+  gap: 14px;
 }
 
 .model-grid {
@@ -240,7 +240,7 @@ textarea {
 .actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
+  gap: 12px;
   align-items: center;
 }
 
@@ -340,11 +340,20 @@ button:disabled {
   justify-content: space-between;
   border-bottom: 1px solid #e7ebf1;
   background: #fbfcfe;
-  padding: 14px 16px;
+  padding: 16px 18px;
 }
 
 .dialog-body {
-  padding: 16px;
+  display: grid;
+  gap: 16px;
+  padding: 18px;
+}
+
+.dialog-message {
+  margin: 0;
+  color: #344154;
+  font-size: 14px;
+  line-height: 1.5;
 }
 
 pre {
@@ -358,26 +367,27 @@ pre {
 }
 
 .status {
-  min-height: 22px;
+  min-height: 24px;
   border-radius: 7px;
   color: #5e6876;
   font-size: 13px;
+  line-height: 1.45;
 }
 
 .model-list {
   display: grid;
-  gap: 10px;
+  gap: 12px;
 }
 
 .model-list-row {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
-  gap: 12px;
+  gap: 14px;
   align-items: center;
   border: 1px solid #d8dee8;
   border-radius: 8px;
   background: #f8fafc;
-  padding: 12px;
+  padding: 14px;
 }
 
 .model-list-name {
@@ -435,6 +445,19 @@ pre {
   border: 1px solid #e7c65d;
   background: #fff8db;
   color: #8a6100;
+}
+
+.notice {
+  border-radius: 7px;
+  padding: 10px 12px;
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.notice.error {
+  border: 1px solid #f0a3a3;
+  background: #fff1f1;
+  color: #b42318;
 }
 
 @media (max-width: 920px) {

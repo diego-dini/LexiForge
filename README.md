@@ -1,7 +1,7 @@
 # LexiForge
 
 Local interceptor and UI for requests compatible with Ollama's
-`/api/generate` route. It receives a translation prompt, extracts the source
+`/ollama/api/generate` route. It receives a translation prompt, extracts the source
 language, target language, and text, applies the selected prompt model, and
 forwards the request to Ollama.
 
@@ -17,12 +17,16 @@ forwards the request to Ollama.
 - `PUT /api/promp/:name`: replaces a saved prompt template.
 - `DELETE /api/promp/:name`: deletes a saved prompt template.
 - `POST /api/promp/validate`: validates prompt template placeholders.
-- `GET /api/tags`: forwards to Ollama and returns available models.
-- `GET /api/ps`: forwards to Ollama and returns running models.
-- `POST /api/show`: forwards model details requests to Ollama.
-- `POST /api/generate`: rewrites the translation prompt, resolves the model,
+- `GET /ollama/api/tags`: forwards to Ollama and returns available models.
+- `GET /ollama/api/ps`: forwards to Ollama and returns running models.
+- `POST /ollama/api/show`: forwards model details requests to Ollama.
+- `GET /ollama/api/models/:model/exists`: checks whether an Ollama model is
+  installed.
+- `POST /ollama/api/pull`: installs an Ollama model.
+- `DELETE /ollama/api/models/:model`: deletes an Ollama model.
+- `POST /ollama/api/generate`: rewrites the translation prompt, resolves the model,
   and forwards the generation request to Ollama.
-- `POST /api/translate-json`: receives a multipart JSON file field named
+- `POST /ollama/api/translate-json`: receives a multipart JSON file field named
   `file`, translates every string entry, and streams progress as NDJSON. The
   final event includes the translated structure.
 
@@ -94,14 +98,14 @@ docker compose --profile ollama up --build
 ## Example
 
 ```bash
-curl -X POST "http://localhost:3000/api/generate" \
+curl -X POST "http://localhost:3000/ollama/api/generate" \
   -H "Content-Type: application/json" \
   -d "{\"model\":\"translategemma:4b\",\"promptModel\":\"default\",\"prompt\":\"Translate the following text from English to pt. Keep it localized and immersive:\n\n\\\"Hello, adventurer.\\\"\",\"temperature\":0.3}"
 ```
 
 ## Prompt Models
 
-`POST /api/generate` accepts an optional `promptModel` field:
+`POST /ollama/api/generate` accepts an optional `promptModel` field:
 
 - `default`: generic translation prompt without game context.
 - `custom`: uses the `customPromptModel` field as the prompt template.

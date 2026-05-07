@@ -27,6 +27,7 @@ const closeGlossaryEntryButton = document.querySelector("#closeGlossaryEntryButt
 const cancelGlossaryEntryButton = document.querySelector("#cancelGlossaryEntryButton");
 const promptPreview = document.querySelector("#promptPreview");
 const modelSelect = document.querySelector("#model");
+const modelMissingNotice = document.querySelector("#modelMissingNotice");
 const sourceLanguageSelect = document.querySelector("#sourceLanguage");
 const targetLanguageSelect = document.querySelector("#targetLanguage");
 const promptModelForm = document.querySelector("#promptModelForm");
@@ -44,8 +45,24 @@ const editorPromptValidation = document.querySelector(
   "#editorPromptValidation",
 );
 const editorPromptPreview = document.querySelector("#editorPromptPreview");
-const promptModelFileList = document.querySelector("#promptModelFileList");
-const promptFilesStatus = document.querySelector("#promptFilesStatus");
+const installAiModelButton = document.querySelector("#installAiModelButton");
+const aiModelList = document.querySelector("#aiModelList");
+const aiModelsStatus = document.querySelector("#aiModelsStatus");
+const messageOverlay = document.querySelector("#messageOverlay");
+const messageDialogForm = document.querySelector("#messageDialogForm");
+const messageDialogTitle = document.querySelector("#messageDialogTitle");
+const messageDialogText = document.querySelector("#messageDialogText");
+const messageDialogInputWrap = document.querySelector("#messageDialogInputWrap");
+const messageDialogInput = document.querySelector("#messageDialogInput");
+const messageDialogConfirmButton = document.querySelector(
+  "#messageDialogConfirmButton",
+);
+const messageDialogCancelButton = document.querySelector(
+  "#messageDialogCancelButton",
+);
+const messageDialogCloseButton = document.querySelector(
+  "#messageDialogCloseButton",
+);
 
 const locales = [
   "unknown",
@@ -75,12 +92,88 @@ const locales = [
 
 let promptModels = {};
 let promptModelDetails = {};
+let aiModels = [];
+let selectedOllamaModelExists = true;
 let editorPromptValidationState = { errors: [], warnings: [] };
 let lastTranslatedJsonFiles = [];
 let promptPreviewRequestId = 0;
+let messageDialogResolve = null;
 
 const fallbackPromptModels = {
 };
+
+function showCustomPrompt({ title, message, value = "", confirmText = "OK" }) {
+  return openMessageDialog({
+    title,
+    message,
+    value,
+    confirmText,
+    mode: "prompt",
+  });
+}
+
+function showCustomConfirm({ title, message, confirmText = "Confirm" }) {
+  return openMessageDialog({
+    title,
+    message,
+    confirmText,
+    mode: "confirm",
+  });
+}
+
+function showCustomMessage({ title, message, confirmText = "OK" }) {
+  return openMessageDialog({
+    title,
+    message,
+    confirmText,
+    mode: "message",
+  });
+}
+
+function openMessageDialog({ title, message, value = "", confirmText, mode }) {
+  closeMessageDialog(null);
+
+  messageDialogTitle.textContent = title;
+  messageDialogText.textContent = message;
+  messageDialogConfirmButton.textContent = confirmText;
+  messageDialogInputWrap.hidden = mode !== "prompt";
+  messageDialogInputWrap.classList.toggle("is-hidden", mode !== "prompt");
+  messageDialogCancelButton.hidden = mode === "message";
+  messageDialogCancelButton.classList.toggle("is-hidden", mode === "message");
+  messageDialogInput.value = value;
+  messageOverlay.hidden = false;
+  messageOverlay.classList.remove("is-hidden");
+
+  if (mode === "prompt") {
+    messageDialogInput.focus();
+    messageDialogInput.select();
+  } else {
+    messageDialogConfirmButton.focus();
+  }
+
+  return new Promise((resolve) => {
+    messageDialogResolve = (confirmed) => {
+      if (!confirmed) {
+        resolve(mode === "prompt" ? null : false);
+        return;
+      }
+
+      resolve(mode === "prompt" ? messageDialogInput.value : true);
+    };
+  });
+}
+
+function closeMessageDialog(confirmed) {
+  if (!messageDialogResolve) {
+    return;
+  }
+
+  const resolve = messageDialogResolve;
+  messageDialogResolve = null;
+  messageOverlay.hidden = true;
+  messageOverlay.classList.add("is-hidden");
+  resolve(confirmed);
+}
 
 // The translated JSON stream can finish files one at a time. Keep the download
 // action available as soon as at least one translated file is ready.
@@ -276,7 +369,6 @@ async function loadPromptModelDetails() {
   }
 
   renderEditorPromptModelOptions(editorPromptModel.value || promptModel.value);
-  renderPromptModelFileList();
 }
 
 // Populate the translation page prompt selector with visible saved models plus
@@ -328,7 +420,7 @@ function renderEditorPromptModelOptions(selectedPromptModel) {
 
 async function loadOllamaModels() {
   try {
-    const response = await fetch("/api/tags");
+    const response = await fetch("/ollama/api/tags");
     const json = await response.json();
     const models = Array.isArray(json.models) ? json.models : [];
 
@@ -348,6 +440,8 @@ async function loadOllamaModels() {
     if (modelSelect.options.length === 0) {
       throw new Error("No models returned");
     }
+
+    await updateSelectedOllamaModelNotice();
   } catch {
     modelSelect.textContent = "";
 
@@ -355,7 +449,47 @@ async function loadOllamaModels() {
     option.value = "translategemma:4b";
     option.textContent = "translategemma:4b";
     modelSelect.append(option);
+    await updateSelectedOllamaModelNotice();
   }
+}
+
+async function updateSelectedOllamaModelNotice() {
+  const model = modelSelect.value.trim();
+
+  if (!model) {
+    showMissingOllamaModelNotice("Select an Ollama model.");
+    return;
+  }
+
+  try {
+    selectedOllamaModelExists = await aiModelExists(model);
+
+    if (!selectedOllamaModelExists) {
+      showMissingOllamaModelNotice(
+        `Ollama model "${model}" is not installed. Install it in AI Models before translating.`,
+      );
+      return;
+    }
+
+    hideMissingOllamaModelNotice();
+  } catch (error) {
+    selectedOllamaModelExists = false;
+    showMissingOllamaModelNotice(
+      error instanceof Error ? error.message : "Failed to check Ollama model.",
+    );
+  }
+}
+
+function showMissingOllamaModelNotice(message) {
+  modelMissingNotice.textContent = message;
+  modelMissingNotice.hidden = false;
+  modelMissingNotice.classList.remove("is-hidden");
+}
+
+function hideMissingOllamaModelNotice() {
+  modelMissingNotice.textContent = "";
+  modelMissingNotice.hidden = true;
+  modelMissingNotice.classList.add("is-hidden");
 }
 
 function loadLanguagePresets() {
@@ -411,8 +545,12 @@ function showPage(pageId) {
     );
   }
 
-  if (pageId === "promptEditorPage" || pageId === "promptFilesPage") {
+  if (pageId === "promptEditorPage") {
     loadPromptModels();
+  }
+
+  if (pageId === "aiModelsPage") {
+    loadAiModels();
   }
 }
 
@@ -420,6 +558,7 @@ promptModel.addEventListener("change", () => {
   updateCustomPromptVisibility();
   updatePromptPreview();
 });
+modelSelect.addEventListener("change", updateSelectedOllamaModelNotice);
 
 inputType.addEventListener("change", () => {
   updateInputTypeVisibility();
@@ -439,6 +578,22 @@ editorPromptModelName.addEventListener("input", updateEditorPromptModelName);
 editorPromptModelTemplate.addEventListener("input", updateEditorPromptPreview);
 newPromptModelButton.addEventListener("click", startNewPromptModel);
 deleteEditorPromptModelButton.addEventListener("click", deletePromptModelFromEditor);
+installAiModelButton.addEventListener("click", installAiModel);
+messageDialogForm.addEventListener("submit", (event) => {
+  event.preventDefault();
+  closeMessageDialog(true);
+});
+messageDialogCancelButton.addEventListener("click", () =>
+  closeMessageDialog(false),
+);
+messageDialogCloseButton.addEventListener("click", () =>
+  closeMessageDialog(false),
+);
+messageOverlay.addEventListener("click", (event) => {
+  if (event.target === messageOverlay) {
+    closeMessageDialog(false);
+  }
+});
 closeGlossaryEntryButton.addEventListener("click", closeGlossaryOverlay);
 cancelGlossaryEntryButton.addEventListener("click", closeGlossaryOverlay);
 glossaryOverlay.addEventListener("click", (event) => {
@@ -496,6 +651,13 @@ form.addEventListener("submit", async (event) => {
   const selectedCustomPromptModel = String(data.get("customPromptModel") || "");
   const glossary = parseGlossaryInput(true);
   const model = String(data.get("model") || "translategemma:4b");
+  await updateSelectedOllamaModelNotice();
+
+  if (!selectedOllamaModelExists) {
+    status.textContent = "Model missing";
+    result.textContent = `Install the selected Ollama model before translating: ${model}`;
+    return;
+  }
 
   submitButton.disabled = true;
   lastTranslatedJsonFiles = [];
@@ -604,7 +766,7 @@ function buildTranslationBody({
 }
 
 function translateText(options) {
-  return fetch("/api/generate", {
+  return fetch("/ollama/api/generate", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(buildTranslationBody(options)),
@@ -636,7 +798,7 @@ function translateJson({
     jsonData.set("customPromptModel", customPromptModel);
   }
 
-  return fetch("/api/translate-json", {
+  return fetch("/ollama/api/translate-json", {
     method: "POST",
     body: jsonData,
   });
@@ -778,9 +940,11 @@ async function savePromptModel(event) {
   let overwrite = false;
 
   if (promptModels[normalizedName] !== undefined) {
-    overwrite = confirm(
-      `Prompt model "${displayPromptModelName(normalizedName)}" already exists. Replace it?`,
-    );
+    overwrite = await showCustomConfirm({
+      title: "Replace Prompt Model",
+      message: `Prompt model "${displayPromptModelName(normalizedName)}" already exists. Replace it?`,
+      confirmText: "Replace",
+    });
 
     if (!overwrite) {
       promptEditorStatus.textContent = "Save canceled.";
@@ -800,9 +964,11 @@ async function savePromptModel(event) {
     let json = await response.json();
 
     if (response.status === 409) {
-      overwrite = confirm(
-        `Prompt model "${displayPromptModelName(normalizedName)}" already exists. Replace it?`,
-      );
+      overwrite = await showCustomConfirm({
+        title: "Replace Prompt Model",
+        message: `Prompt model "${displayPromptModelName(normalizedName)}" already exists. Replace it?`,
+        confirmText: "Replace",
+      });
 
       if (!overwrite) {
         promptEditorStatus.textContent = "Save canceled.";
@@ -972,11 +1138,37 @@ async function deletePromptModelFromEditor() {
   }
 }
 
-// Build the download/delete management list from `/api/promp/details`.
-function renderPromptModelFileList() {
-  promptModelFileList.textContent = "";
+async function loadAiModels() {
+  aiModelsStatus.textContent = "Loading AI models...";
 
-  for (const [name, detail] of Object.entries(promptModelDetails)) {
+  try {
+    const response = await fetch("/ollama/api/tags");
+    const json = await response.json();
+
+    if (!response.ok) {
+      throw new Error(json.error || "Failed to load AI models.");
+    }
+
+    aiModels = Array.isArray(json.models) ? json.models : [];
+    renderAiModelList();
+    aiModelsStatus.textContent = `${aiModels.length} model${aiModels.length === 1 ? "" : "s"} installed.`;
+  } catch (error) {
+    aiModelList.textContent = "";
+    aiModelsStatus.textContent =
+      error instanceof Error ? error.message : "Failed to load AI models.";
+  }
+}
+
+function renderAiModelList() {
+  aiModelList.textContent = "";
+
+  for (const model of aiModels) {
+    const name = model.name || "";
+
+    if (!name) {
+      continue;
+    }
+
     const row = document.createElement("div");
     row.className = "model-list-row";
 
@@ -985,54 +1177,176 @@ function renderPromptModelFileList() {
     const meta = document.createElement("div");
 
     title.className = "model-list-name";
-    title.textContent = displayPromptModelName(name);
+    title.textContent = name;
     meta.className = "model-list-meta";
-    meta.textContent = detail.saved ? "Saved model" : "Built-in model";
+    meta.textContent = `Size: ${formatBytes(model.size)}`;
 
     info.append(title, meta);
 
     const actions = document.createElement("div");
     actions.className = "actions compact-actions";
 
-    const downloadButton = document.createElement("button");
-    downloadButton.className = "secondary";
-    downloadButton.type = "button";
-    downloadButton.textContent = "Download";
-    downloadButton.addEventListener("click", () =>
-      downloadPromptModel(name, detail.template),
-    );
-    actions.append(downloadButton);
-
     const deleteButton = document.createElement("button");
     deleteButton.className = "secondary";
     deleteButton.type = "button";
     deleteButton.textContent = "Delete";
-    deleteButton.disabled = !detail.saved;
-    deleteButton.addEventListener("click", () => deletePromptModel(name));
+    deleteButton.addEventListener("click", () => deleteAiModel(name));
     actions.append(deleteButton);
 
     row.append(info, actions);
-    promptModelFileList.append(row);
+    aiModelList.append(row);
   }
 }
 
-// Downloads one prompt model as a standalone JSON object.
-function downloadPromptModel(name, template) {
-  const content = JSON.stringify({ [name]: template }, null, 2);
-  const blob = new Blob([content], { type: "application/json" });
-  const url = URL.createObjectURL(blob);
-  const anchor = document.createElement("a");
+async function installAiModel() {
+  installAiModelButton.disabled = true;
 
-  anchor.href = url;
-  anchor.download = `${name}.prompt-model.json`;
-  anchor.click();
+  try {
+    await promptAndInstallAiModel();
+  } catch (error) {
+    aiModelsStatus.textContent =
+      error instanceof Error ? error.message : "Failed to install model.";
+  } finally {
+    installAiModelButton.disabled = false;
+  }
+}
 
-  setTimeout(() => URL.revokeObjectURL(url), 0);
+async function promptAndInstallAiModel(initialModel = "") {
+  const model = await showCustomPrompt({
+    title: "Install AI Model",
+    message: "Enter the Ollama model name to install.",
+    value: initialModel,
+    confirmText: "Install",
+  });
+
+  if (model === null) {
+    return;
+  }
+
+  const normalizedModel = model.trim();
+
+  if (!normalizedModel) {
+    aiModelsStatus.textContent = "Model name is required.";
+    return promptAndInstallAiModel(normalizedModel);
+  }
+
+  aiModelsStatus.textContent = `Checking ${normalizedModel}...`;
+
+  if (await aiModelExists(normalizedModel)) {
+    aiModelsStatus.textContent = `Model already installed: ${normalizedModel}`;
+    return promptAndInstallAiModel(normalizedModel);
+  }
+
+  aiModelsStatus.textContent = `Installing ${normalizedModel}...`;
+
+  const response = await fetch("/ollama/api/pull", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ model: normalizedModel }),
+  });
+  const json = await response.json();
+
+  if (!response.ok) {
+    throw new Error(json.error || "Failed to install model.");
+  }
+
+  if (!json.installed) {
+    const notFoundMessage =
+      json.message ||
+      "Model was not found in Ollama. Check the model name and tag.";
+    await loadAiModels();
+    aiModelsStatus.textContent = notFoundMessage;
+    await showCustomMessage({
+      title: "AI Model Not Found",
+      message: `${notFoundMessage} Model: ${normalizedModel}`,
+      confirmText: "Try another name",
+    });
+    return promptAndInstallAiModel(normalizedModel);
+  }
+
+  aiModelsStatus.textContent = `Installed model: ${normalizedModel}`;
+  await loadAiModels();
+  await loadOllamaModels();
+}
+
+async function deleteAiModel(name) {
+  if (!(await aiModelExists(name))) {
+    aiModelsStatus.textContent = `Model is not installed: ${name}`;
+    await loadAiModels();
+    return;
+  }
+
+  const confirmed = await showCustomConfirm({
+    title: "Delete AI Model",
+    message: `Delete AI model "${name}"?`,
+    confirmText: "Delete",
+  });
+
+  if (!confirmed) {
+    return;
+  }
+
+  aiModelsStatus.textContent = `Deleting ${name}...`;
+
+  try {
+    const response = await fetch(
+      `/ollama/api/models/${encodeURIComponent(name)}`,
+      { method: "DELETE" },
+    );
+    const json = await response.json();
+
+    if (!response.ok) {
+      throw new Error(json.error || "Failed to delete AI model.");
+    }
+
+    aiModelsStatus.textContent = `Deleted AI model: ${name}`;
+    await loadAiModels();
+    await loadOllamaModels();
+  } catch (error) {
+    aiModelsStatus.textContent =
+      error instanceof Error ? error.message : "Failed to delete AI model.";
+  }
+}
+
+async function aiModelExists(name) {
+  const response = await fetch(
+    `/ollama/api/models/${encodeURIComponent(name)}/exists`,
+  );
+  const json = await response.json();
+
+  if (!response.ok) {
+    throw new Error(json.error || "Failed to check model.");
+  }
+
+  return Boolean(json.exists);
+}
+
+function formatBytes(value) {
+  if (typeof value !== "number" || !Number.isFinite(value) || value <= 0) {
+    return "Unknown";
+  }
+
+  const units = ["B", "KB", "MB", "GB", "TB"];
+  let size = value;
+  let unitIndex = 0;
+
+  while (size >= 1024 && unitIndex < units.length - 1) {
+    size /= 1024;
+    unitIndex += 1;
+  }
+
+  return `${size.toFixed(size >= 10 || unitIndex === 0 ? 0 : 1)} ${units[unitIndex]}`;
 }
 
 // Shared delete helper used by the editor page and the management page.
-async function deletePromptModel(name, statusElement = promptFilesStatus) {
-  if (!confirm(`Delete prompt model "${displayPromptModelName(name)}"?`)) {
+async function deletePromptModel(name, statusElement = promptEditorStatus) {
+  const confirmed = await showCustomConfirm({
+    title: "Delete Prompt Model",
+    message: `Delete prompt model "${displayPromptModelName(name)}"?`,
+    confirmText: "Delete",
+  });
+
+  if (!confirmed) {
     return false;
   }
 
