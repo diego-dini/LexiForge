@@ -1,0 +1,258 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>LexiForge</title>
+    <link rel="stylesheet" href="/styles.css?v=20260507-ai-model-notices" />
+    <script src="/app.js?v=20260507-ai-model-notices" defer></script>
+  </head>
+  <body>
+    <main>
+      <header class="app-header">
+        <div>
+          <h1>LexiForge</h1>
+          <p>Local translation workspace for text and structured JSON files.</p>
+        </div>
+
+        <nav class="app-nav" aria-label="Pages">
+          <button class="nav-button is-active" type="button" data-page-target="translationPage">Translation</button>
+          <button class="nav-button" type="button" data-page-target="promptEditorPage">Edit Prompt Models</button>
+          <button class="nav-button" type="button" data-page-target="aiModelsPage">AI Models</button>
+          <button class="nav-button" type="button" data-page-target="requestMonitorPage">Request Monitor</button>
+        </nav>
+      </header>
+
+      <section id="translationPage" class="page is-active">
+        <div class="shell">
+          <section class="panel">
+            <div class="panel-header">
+              <h2>Translation</h2>
+            </div>
+
+            <form id="translateForm">
+              <div class="section">
+                <div class="section-title">Input</div>
+                <div class="grid">
+                  <label>
+                    Input type
+                    <select id="inputType" name="inputType">
+                      <option value="text">Text</option>
+                      <option value="json">JSON</option>
+                    </select>
+                  </label>
+
+                  <label>
+                    Source language
+                    <select id="sourceLanguage" name="sourceLanguage"></select>
+                  </label>
+
+                  <label>
+                    Target language
+                    <select id="targetLanguage" name="targetLanguage"></select>
+                  </label>
+                </div>
+              </div>
+
+              <div class="section">
+                <div class="section-title">Model</div>
+                <div class="grid model-grid">
+                  <label>
+                    Ollama model
+                    <select id="model" name="model">
+                      <option value="translategemma:4b">translategemma:4b</option>
+                    </select>
+                  </label>
+
+                  <label>
+                    Prompt model
+                    <select id="promptModel" name="promptModel">
+                      <option value="custom">custom</option>
+                    </select>
+                  </label>
+                </div>
+                <div id="modelMissingNotice" class="notice error is-hidden" hidden></div>
+              </div>
+
+              <div class="section">
+                <div class="section-title">Content</div>
+                <label id="textInputWrap">
+                  <span>Text</span>
+                  <textarea name="text" required></textarea>
+                </label>
+
+                <label id="jsonInputWrap" class="file-drop is-hidden" hidden>
+                  <span>JSON file</span>
+                  <input id="jsonFile" name="file" type="file" accept="application/json,.json" multiple disabled />
+                  <small>Drop one or more JSON files anywhere on this window.</small>
+                </label>
+              </div>
+
+              <div class="section">
+                <div class="section-title">Prompt</div>
+                <label>
+                  Glossary
+                  <textarea id="glossaryInput" name="glossary" placeholder='{"Armor Class":"Classe de Armadura"}'></textarea>
+                </label>
+                <div class="actions compact-actions">
+                  <input id="glossaryFileInput" class="is-hidden" type="file" accept="application/json,.json" />
+                  <button id="loadGlossaryButton" class="secondary" type="button">Load glossary</button>
+                  <button id="downloadGlossaryButton" class="secondary" type="button">Download glossary</button>
+                  <button id="openGlossaryEntryButton" class="secondary" type="button">Add entry</button>
+                </div>
+
+                <label id="customPromptWrap" class="is-hidden" hidden>
+                  Custom prompt model
+                  <textarea id="customPromptModel" name="customPromptModel" disabled>Translate from {sourceLanguage} to {targetLanguage}. Return only the answer.
+
+{text}</textarea>
+                </label>
+
+                <label>
+                  Prompt preview
+                  <pre id="promptPreview"></pre>
+                </label>
+              </div>
+
+              <div class="actions">
+                <button id="submitButton" type="submit">Translate</button>
+                <button id="downloadJsonButton" class="secondary is-hidden" type="button" hidden>
+                  Download JSON
+                </button>
+              </div>
+            </form>
+          </section>
+
+          <section class="panel">
+            <div class="panel-header">
+              <h2>Result</h2>
+            </div>
+
+            <div class="result">
+              <div id="status" class="status"></div>
+              <pre id="result"></pre>
+            </div>
+          </section>
+        </div>
+      </section>
+
+      <section id="promptEditorPage" class="page" hidden>
+        <section class="panel">
+          <div class="panel-header">
+            <h2>Edit Prompt Models</h2>
+          </div>
+
+          <form id="promptModelForm" class="page-form">
+            <div class="grid model-grid">
+              <label>
+                Existing model
+                <select id="editorPromptModel"></select>
+              </label>
+
+              <label>
+                Save as
+                <input id="editorPromptModelName" autocomplete="off" />
+              </label>
+            </div>
+
+            <label>
+              Template
+              <textarea id="editorPromptModelTemplate" class="large-textarea"></textarea>
+            </label>
+
+            <div class="placeholder-list">
+              <span>Valid keys</span>
+              <code>{glossary}</code>
+              <code>{text}</code>
+              <code>{targetLanguage}</code>
+              <code>{originLanguage}</code>
+            </div>
+
+            <div id="editorPromptValidation" class="validation-messages"></div>
+
+            <label>
+              Prompt preview
+              <pre id="editorPromptPreview"></pre>
+            </label>
+
+            <div class="actions">
+              <button id="savePromptModelButton" type="submit">Save Prompt Model</button>
+              <button id="newPromptModelButton" class="secondary" type="button">New Model</button>
+              <button id="deleteEditorPromptModelButton" class="secondary" type="button">Delete</button>
+            </div>
+
+            <div id="promptEditorStatus" class="status"></div>
+          </form>
+        </section>
+      </section>
+
+      <section id="aiModelsPage" class="page" hidden>
+        <section class="panel">
+          <div class="panel-header">
+            <h2>AI Models</h2>
+          </div>
+
+          <div class="page-form">
+            <div class="actions">
+              <button id="installAiModelButton" type="button">Install Model</button>
+            </div>
+            <div id="aiModelList" class="model-list"></div>
+            <div id="aiModelsStatus" class="status"></div>
+          </div>
+        </section>
+      </section>
+
+      <section id="requestMonitorPage" class="page" hidden></section>
+    </main>
+
+    <div id="glossaryOverlay" class="overlay is-hidden" hidden>
+      <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="glossaryDialogTitle">
+        <div class="dialog-header">
+          <h2 id="glossaryDialogTitle">Glossary entry</h2>
+          <button id="closeGlossaryEntryButton" class="icon-button" type="button" aria-label="Close">x</button>
+        </div>
+
+        <form id="glossaryEntryForm" class="dialog-body">
+          <label>
+            Original value
+            <input id="glossarySourceInput" name="source" autocomplete="off" required />
+          </label>
+
+          <label>
+            Translated value
+            <input id="glossaryTargetInput" name="target" autocomplete="off" required />
+          </label>
+
+          <div class="actions">
+            <button type="submit">Add to glossary</button>
+            <button id="cancelGlossaryEntryButton" class="secondary" type="button">Cancel</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <div id="messageOverlay" class="overlay is-hidden" hidden>
+      <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="messageDialogTitle">
+        <form id="messageDialogForm">
+          <div class="dialog-header">
+            <h2 id="messageDialogTitle">Message</h2>
+            <button id="messageDialogCloseButton" class="icon-button" type="button" aria-label="Close">x</button>
+          </div>
+
+          <div class="dialog-body">
+            <p id="messageDialogText" class="dialog-message"></p>
+            <label id="messageDialogInputWrap" class="is-hidden" hidden>
+              Response
+              <input id="messageDialogInput" autocomplete="off" />
+            </label>
+
+            <div class="actions">
+              <button id="messageDialogConfirmButton" type="submit">Confirm</button>
+              <button id="messageDialogCancelButton" class="secondary" type="button">Cancel</button>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+  </body>
+</html>

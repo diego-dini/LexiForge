@@ -1,9 +1,17 @@
 # LexiForge
 
-Local interceptor and UI for requests compatible with Ollama's
-`/ollama/api/generate` route. It receives a translation prompt, extracts the source
-language, target language, and text, applies the selected prompt model, and
-forwards the request to Ollama.
+Local translation UI and Ollama-compatible proxy. LexiForge receives text or JSON
+translation requests, applies the selected prompt model and glossary, then
+forwards generation work to Ollama.
+
+## Project Layout
+
+- `src/backend`: Hono server, Ollama proxy routes, prompt-model storage, and JSON
+  translation streaming.
+- `src/frontend`: TypeScript UI source copied and bundled into `public`.
+- `scripts/build.mjs`: esbuild pipeline that writes browser assets to `public`.
+- `prompt-models/prompt-models.json`: saved prompt templates loaded by the
+  backend.
 
 ## Routes
 
@@ -42,6 +50,15 @@ forwards the request to Ollama.
 bun install
 ```
 
+## Build
+
+```bash
+bun run build
+```
+
+Production builds minify `public/app.js`. Development builds and watch mode keep
+source maps enabled.
+
 ## Run
 
 ```bash
@@ -60,7 +77,7 @@ Enable debug logs:
 bun run start --debug
 ```
 
-The app also accepts `--degug`.
+The app also accepts the legacy misspelling `--degug`.
 
 ## Docker
 

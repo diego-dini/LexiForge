@@ -1,14 +1,18 @@
 {
   "name": "lexiforge",
-  "module": "index.ts",
+  "module": "src/backend/index.ts",
   "type": "module",
   "private": true,
   "scripts": {
-    "start": "bun run src/index.ts",
-    "dev": "bun --watch src/index.ts --debug"
+    "dev": "concurrently \"bun scripts/build.mjs --watch\" \"bun --hot src/backend/index.ts --debug\"",
+    "build": "bun scripts/build.mjs --prod",
+    "start": "bun src/backend/index.ts"
   },
   "devDependencies": {
-    "@types/bun": "latest"
+    "@types/bun": "latest",
+    "concurrently": "^9.2.1",
+    "esbuild": "^0.28.0",
+    "esbuild-plugin-copy": "^2.1.1"
   },
   "peerDependencies": {
     "typescript": "^5"

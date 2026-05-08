@@ -3,7 +3,7 @@ import { DEFAULT_TRANSLATION_PROMPT } from "../preparePrompt";
 
 export const DEFAULT_PROMPT_MODEL = "default";
 
-const PROMPT_MODELS_DIR = new URL("../../prompt-models/", import.meta.url);
+const PROMPT_MODELS_DIR = new URL("../../../prompt-models/", import.meta.url);
 const PROMPT_MODELS_FILE = new URL(
   "prompt-models.json",
   PROMPT_MODELS_DIR,

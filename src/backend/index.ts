@@ -7,7 +7,7 @@ const app = new Hono();
 const idleTimeout = Number(Bun.env.IDLE_TIMEOUT_SECONDS ?? 120);
 
 function servePublicFile(fileName: string, contentType: string) {
-  const file = Bun.file(new URL(`../public/${fileName}`, import.meta.url));
+  const file = Bun.file(new URL(`../../public/${fileName}`, import.meta.url));
 
   return new Response(file, {
     headers: {
